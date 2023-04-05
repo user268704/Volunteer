@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Volunteer.Maui.Pages.RegistrationPage" 
+             BackgroundColor="{StaticResource DarkBackgroundColor}">
+    <StackLayout Padding="30">
+        <Label Text="Регистрация" Style="{StaticResource TitleLabel}" />
+        <Entry Placeholder="Email" Keyboard="Email" Style="{StaticResource EntryStyle}" />
+        <Entry Placeholder="Придумайте пароль" IsPassword="True" Style="{StaticResource EntryStyle}" />
+        <Entry Placeholder="Подтвердите пароль" IsPassword="True" Style="{StaticResource EntryStyle}" />
+        <Button Text="Зарегистрироваться" Style="{StaticResource PrimaryButton}" />
+        <Label Text="Уже есть аккаунт?" Style="{StaticResource SecondaryLabel}" />
+        <Button Text="Войти" Style="{StaticResource SecondaryButton}" />
+    </StackLayout>
+</ContentPage>
