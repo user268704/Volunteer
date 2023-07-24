@@ -1,9 +1,7 @@
-﻿using Volunteer.Api.Services.Fillers;
-using Volunteer.Infrastructure;
-using Volunteer.Models;
+﻿using Volunteer.Infrastructure;
 using Volunteer.Models.Event;
 
-namespace Volunteer.Api.Services;
+namespace Volunteer.Api.Services.Fillers;
 
 public class CityService : IFillService
 {
@@ -15,7 +13,7 @@ public class CityService : IFillService
         _context = context;
         _configuration = configuration;
     }
-    
+
     public void Fill()
     {
         var cities = _configuration.GetSection("Cities").GetChildren();

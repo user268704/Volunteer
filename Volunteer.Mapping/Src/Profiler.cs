@@ -12,10 +12,9 @@ public class Profiler : Profile
         CreateMap<UserIdentity, UserDto>().ReverseMap();
         CreateMap<UserIdentity, UserRegister>().ReverseMap();
         CreateMap<UserIdentity, UserLogin>().ReverseMap();
-
+        CreateMap<Event, EventCreate>().ReverseMap();
+        
         CreateMap<Event, EventDto>()
-            .ReverseMap()
-            .ForMember(x => x.Admin, expression => expression.Ignore())
-            .ForMember(x => x.Participants, expression => expression.Ignore());
+            .ReverseMap();
     }
 }

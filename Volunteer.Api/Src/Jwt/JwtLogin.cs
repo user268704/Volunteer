@@ -13,13 +13,15 @@ public class JwtLogin : IJwtLogin
     {
         _configuration = configuration;
     }
-    
+
     public string GetToken(List<Claim> claims)
     {
         var jwt = new JwtSecurityToken(
             claims: claims,
-            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])), SecurityAlgorithms.HmacSha256));
-            
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"])),
+                SecurityAlgorithms.HmacSha256));
+
         return new JwtSecurityTokenHandler().WriteToken(jwt);
     }
 }

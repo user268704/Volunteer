@@ -12,6 +12,7 @@ public class DataContext : IdentityDbContext<UserIdentity>
     public DbSet<City> Cities { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<EventType> EventTypes { get; set; }
+    public DbSet<ActiveEvents> ActiveUserEvents { get; set; }
     
     public DataContext(DbContextOptions<DataContext> options) : base(options)
     {
@@ -20,8 +21,7 @@ public class DataContext : IdentityDbContext<UserIdentity>
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.Entity<Event>().Navigation(e => e.Participants).AutoInclude();
-        builder.Entity<Event>().Navigation(e => e.Admin).AutoInclude();
+        // builder.Entity<Event>().Navigation(e => e.Admin).AutoInclude();
         
         base.OnModelCreating(builder);
     }

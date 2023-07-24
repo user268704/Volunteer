@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volunteer.Infrastructure;
@@ -11,9 +12,11 @@ using Volunteer.Infrastructure;
 namespace Volunteer.Api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20230724122749_ActiveEvents")]
+    partial class ActiveEvents
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -178,7 +181,7 @@ namespace Volunteer.Api.Migrations
                     b.Property<string>("AdminId")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CityId")
+                    b.Property<Guid>("City")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("Date")
@@ -206,7 +209,7 @@ namespace Volunteer.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("TypeId")
+                    b.Property<Guid>("Type")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Venue")
@@ -216,10 +219,6 @@ namespace Volunteer.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AdminId");
-
-                    b.HasIndex("CityId");
-
-                    b.HasIndex("TypeId");
 
                     b.ToTable("Events");
                 });
@@ -401,23 +400,7 @@ namespace Volunteer.Api.Migrations
                         .WithMany()
                         .HasForeignKey("AdminId");
 
-                    b.HasOne("Volunteer.Models.Event.City", "City")
-                        .WithMany()
-                        .HasForeignKey("CityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Volunteer.Models.Event.EventType", "Type")
-                        .WithMany()
-                        .HasForeignKey("TypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Admin");
-
-                    b.Navigation("City");
-
-                    b.Navigation("Type");
                 });
 
             modelBuilder.Entity("Volunteer.Models.User.ActiveEvents", b =>

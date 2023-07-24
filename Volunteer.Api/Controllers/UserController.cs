@@ -1,10 +1,11 @@
 ﻿using System.Security.Claims;
+using System.Text;
 using AutoMapper;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Volunteer.Api.Jwt;
+using Volunteer.Api.Services.Users;
 using Volunteer.Models.Responses;
 using Volunteer.Models.User;
 
@@ -15,24 +16,27 @@ namespace Volunteer.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("user")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize]
 public class UserController : ControllerBase
 {
     private readonly UserManager<UserIdentity> _userManager;
     private readonly SignInManager<UserIdentity> _signInManager;
-    private IJwtLogin _jwtLogin;
+    private readonly IUserManager _customUserManager;
+    private readonly IJwtLogin _jwtLogin;
     private readonly IMapper _mapper;
-    
+
     public UserController(UserManager<UserIdentity> userManager,
-        SignInManager<UserIdentity> signInManager, 
+        SignInManager<UserIdentity> signInManager,
+        IUserManager customUserManager,
         IMapper mapper, IJwtLogin jwtLogin)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _customUserManager = customUserManager;
         _mapper = mapper;
         _jwtLogin = jwtLogin;
     }
-    
+
     /// <summary>
     /// Логин пользователя
     /// </summary>
@@ -47,8 +51,9 @@ public class UserController : ControllerBase
         if (user == null)
             return Ok(new ErrorResponse
             {
-                Error = "user_not_found",
-                Message = "Такого пользователя не существует"
+                Error = "incorrect_data",
+                Message = "Пароль или Email не верны",
+                StatusCode = 400
             });
 
         bool isValidPassword = await _userManager.CheckPasswordAsync(user, userLogin.Password);
@@ -56,18 +61,19 @@ public class UserController : ControllerBase
         if (isValidPassword)
         {
             await _signInManager.SignInAsync(user, true);
-            string jwtToken = _jwtLogin.GetToken((List<Claim>)await _userManager.GetClaimsAsync(user));
-            return Ok(jwtToken);
+            // string jwtToken = _jwtLogin.GetToken((List<Claim>)await _userManager.GetClaimsAsync(user));
+            return Ok();
         }
 
         return Ok(new ErrorResponse
         {
             Error = "incorrect_data",
-            Message = "Пароль или Email не верны"
+            Message = "Пароль или Email не верны",
+            StatusCode = 400
         });
     }
 
-    
+
     /// <summary>
     /// Регистрация пользователя
     /// </summary>
@@ -83,10 +89,12 @@ public class UserController : ControllerBase
             return Ok(new ErrorResponse
             {
                 Error = "user_exists",
-                Message = "Такой пользователь уже существует"
+                Message = "Такой пользователь уже существует",
+                StatusCode = 400
             });
 
-        fullUser.UserName = fullUser.Email;
+        fullUser.UserName = CreateUserName(user);
+
         var createResult = await _userManager.CreateAsync(fullUser, user.Password);
         if (createResult.Succeeded)
         {
@@ -95,23 +103,22 @@ public class UserController : ControllerBase
                 new(ClaimTypes.Email, fullUser.Email),
                 new("username", fullUser.UserName),
                 new(ClaimTypes.Name, fullUser.Name),
-                new(ClaimTypes.Role, "volunteer"),
                 new(ClaimTypes.Surname, fullUser.Lastname),
                 new(ClaimTypes.GivenName, fullUser.Patronymic),
             });
-            
-            await _userManager.AddToRoleAsync(fullUser, "volunteer");
-            string jwtToken = _jwtLogin.GetToken((await _userManager.GetClaimsAsync(fullUser)).ToList());
 
+            await _userManager.AddToRoleAsync(fullUser, "volunteer");
             await _signInManager.SignInAsync(fullUser, true);
-        
-            return Ok(jwtToken);
+
+            return Ok();
         }
 
         return Ok(new ErrorResponse
         {
             Error = "create_user_error",
-            Message = "Не удалось создать аккаунт"
+            Message =
+                $"Не удалось создать аккаунт: {string.Join(", ", createResult.Errors.Select(x => x.Description))}",
+            StatusCode = 400
         });
     }
 
@@ -129,6 +136,29 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
+    /// Получить активные события
+    /// </summary>
+    /// <returns></returns>
+    [Route("get/events")]
+    [HttpGet]
+    public async Task<IActionResult> GetActiveEvents()
+    {
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+
+        if (user == null)
+        {
+            return Ok(new ErrorResponse
+            {
+                Error = "user_not_found",
+                Message = "Такого пользователя не существует",
+                StatusCode = 404
+            });
+        }
+
+        return Ok(_customUserManager.GetActiveUserEvents(user));
+    }
+
+    /// <summary>
     /// Получить пользователя
     /// </summary>
     /// <returns></returns>
@@ -138,13 +168,14 @@ public class UserController : ControllerBase
     {
         UserIdentity? user = await _userManager.FindByIdAsync(uid.ToString());
 
+
         if (user == null)
             return Ok(new ErrorResponse
             {
-                StatusCode = 404,
-                Error = "Такого пользователя не существует"
+                Error = "user_not_found",
+                Message = "Такого пользователя не существует",
+                StatusCode = 404
             });
-
         return Ok(_mapper.Map<UserDto>(user));
     }
 
@@ -158,7 +189,7 @@ public class UserController : ControllerBase
     {
         UserIdentity userMe =
             await _userManager.FindByEmailAsync(HttpContext.User.Claims.First(x => x.Type == ClaimTypes.Email).Value);
-        
+
         return Ok(_mapper.Map<UserDto>(userMe));
     }
 
@@ -171,5 +202,14 @@ public class UserController : ControllerBase
     public IActionResult Edit()
     {
         throw new NotImplementedException();
+    }
+
+    private string CreateUserName(UserRegister user)
+    {
+        StringBuilder builder = new StringBuilder();
+
+        builder.AppendFormat("{0}{1}{2}", user.Name, user.Lastname, user.Email[..user.Email.IndexOf('@')]);
+
+        return builder.ToString();
     }
 }

@@ -16,7 +16,7 @@ public class EventManager : IEventManager
         _context = context;
         _eventValidator = new();
     }
-    
+
     public async Task CreateAsync(Event @event)
     {
         @event.Id = Guid.NewGuid();
@@ -24,10 +24,15 @@ public class EventManager : IEventManager
 
         await _context.SaveChangesAsync();
     }
-    
+
     public void AddUser(Event @event, UserIdentity user)
     {
-        @event.Participants.Add(user);
+        _context.ActiveUserEvents.Add(new ActiveEvents
+        {
+            Event = @event,
+            User = user
+        });
+
         _context.SaveChanges();
     }
 
@@ -49,7 +54,7 @@ public class EventManager : IEventManager
 
     public List<Event> GetFilter(City city, EventType type)
     {
-        var events =  _context.Events.Where(x => x.City == city.Id && x.Type == type.Id).ToList();
+        var events = _context.Events.Where(x => x.City.Id == city.Id && x.Type.Id == type.Id).ToList();
 
         return events;
     }

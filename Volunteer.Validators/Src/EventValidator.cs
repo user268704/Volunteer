@@ -30,13 +30,11 @@ public class EventValidator : AbstractValidator<Event>
         RuleFor(newEvent => newEvent.Venue)
             .NotEmpty()
             .WithMessage("Место проведения мероприятия должно быть указана");
-
-        RuleFor(newEvent => newEvent.Participants)
-            .Must(user => user.DistinctBy(x => x.Id).ToList().Count == user.Count)
-            .WithMessage("Участники не могут повторяться");
         
+        /*
         RuleFor(newEvent => newEvent.NumbParticipants)
             .LessThan(x => x.Participants.Count)
             .WithMessage("Максимальное количество участников");
+    */
     }
 }
