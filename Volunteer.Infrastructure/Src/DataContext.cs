@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Volunteer.Models;
 using Volunteer.Models.Event;
+using Volunteer.Models.Requests;
 using Volunteer.Models.User;
 
 namespace Volunteer.Infrastructure;
@@ -13,6 +12,7 @@ public class DataContext : IdentityDbContext<UserIdentity>
     public DbSet<Event> Events { get; set; }
     public DbSet<EventType> EventTypes { get; set; }
     public DbSet<ActiveEvents> ActiveUserEvents { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
     
     public DataContext(DbContextOptions<DataContext> options) : base(options)
     {

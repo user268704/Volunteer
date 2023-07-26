@@ -46,12 +46,35 @@ public class EventsController : ControllerBase
     /// </summary>
     /// <param name="newEvent">Событие</param>
     /// <returns></returns>
-    [Authorize("verified_volunteer")]
+    [Authorize("admin")]
     [Route("create")]
     [HttpPost]
     public async Task<IActionResult> Create(EventCreate newEvent)
     {
-        var fullEvent = _mapper.Map<Event>(newEvent);
+        var city = _context.Cities.Find(newEvent.City);
+        var eventType = _context.EventTypes.Find(newEvent.Type);
+
+        if (city == null)
+            return Ok(new ErrorResponse
+            {
+                Error = "city_not_exists",
+                Message = "Города с таким id не существует",
+                StatusCode = 404
+            });
+
+        if (eventType == null)
+            return Ok(new ErrorResponse
+            {
+                Error = "eventType_not_exists",
+                Message = "Событие не может быть этого типа",
+                StatusCode = 404
+            });
+
+        var fullEvent = _mapper.Map<Event>(newEvent, options =>
+        {
+            options.Items.Add("city", city);
+            options.Items.Add("eventType", eventType);
+        });
         fullEvent.Admin = await _userManager.FindByEmailAsync(HttpContext.User.Claims
             .First(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
             .Value);

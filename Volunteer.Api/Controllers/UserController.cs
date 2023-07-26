@@ -134,7 +134,7 @@ public class UserController : ControllerBase
 
         return Ok();
     }
-
+    
     /// <summary>
     /// Получить активные события
     /// </summary>

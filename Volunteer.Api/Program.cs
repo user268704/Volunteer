@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Volunteer.Api.Jwt;
-using Volunteer.Api.Services;
 using Volunteer.Api.Services.Events;
 using Volunteer.Api.Services.Fillers;
+using Volunteer.Api.Services.Notifications;
 using Volunteer.Api.Services.Users;
+using Volunteer.Api.Signal;
 using Volunteer.Infrastructure;
 using Volunteer.Mapping;
 using Volunteer.Models.User;
@@ -18,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(Profiler));
 builder.Services.AddIdentity<UserIdentity, IdentityRole>(options =>
@@ -35,6 +37,11 @@ builder.Services.AddSwaggerGen(options =>
     string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     options.IncludeXmlComments(xmlPath);
 });
+
+builder.Services.AddScoped<IJwtLogin, JwtLogin>();
+builder.Services.AddScoped<IEventManager, EventManager>();
+builder.Services.AddScoped<IUserManager, UserManager>();
+builder.Services.AddScoped<INotificationManager, NotificationManager>();
 
 #endregion
 
@@ -69,15 +76,6 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 #endregion
 
-#region Services
-
-builder.Services.AddScoped<IJwtLogin, JwtLogin>();
-builder.Services.AddScoped<IEventManager, EventManager>();
-builder.Services.AddScoped<IUserManager, UserManager>();
-
-#endregion
-
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -108,7 +106,7 @@ app.Use(async (context, next) =>
 
     #endregion
 
-    #region fill
+    #region Fill
 
     var dataContext = context.RequestServices.GetRequiredService<DataContext>();
     var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
@@ -125,9 +123,10 @@ app.Use(async (context, next) =>
     }
 
     #endregion
-
     await next.Invoke();
 });
+
+app.MapHub<SignalHub>("signal");
 
 app.UseHttpsRedirection();
 

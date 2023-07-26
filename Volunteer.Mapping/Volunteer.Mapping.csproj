@@ -12,6 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Volunteer.Infrastructure\Volunteer.Infrastructure.csproj"/>
     <ProjectReference Include="..\Volunteer.Models\Volunteer.Models.csproj" />
   </ItemGroup>
 
