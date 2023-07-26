@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Volunteer.Api.Services.Events;
-using Volunteer.Api.Services.Users;
 using Volunteer.Infrastructure;
 using Volunteer.Models.Event;
 using Volunteer.Models.Responses;
@@ -22,20 +21,17 @@ public class EventsController : ControllerBase
 {
     private readonly IEventManager _eventManager;
     private readonly UserManager<UserIdentity> _userManager;
-    private readonly IUserManager _customUserManager;
     private readonly DataContext _context;
     private readonly IMapper _mapper;
     private readonly EventValidator _eventValidator;
 
     public EventsController(IEventManager eventManager,
         UserManager<UserIdentity> userManager,
-        IUserManager customUserManager,
         DataContext context,
         IMapper mapper)
     {
         _eventManager = eventManager;
         _userManager = userManager;
-        _customUserManager = customUserManager;
         _context = context;
         _mapper = mapper;
         _eventValidator = new();
@@ -46,7 +42,7 @@ public class EventsController : ControllerBase
     /// </summary>
     /// <param name="newEvent">Событие</param>
     /// <returns></returns>
-    [Authorize("admin")]
+    [Authorize("volunteer")]
     [Route("create")]
     [HttpPost]
     public async Task<IActionResult> Create(EventCreate newEvent)
@@ -75,6 +71,7 @@ public class EventsController : ControllerBase
             options.Items.Add("city", city);
             options.Items.Add("eventType", eventType);
         });
+        
         fullEvent.Admin = await _userManager.FindByEmailAsync(HttpContext.User.Claims
             .First(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
             .Value);
@@ -107,39 +104,7 @@ public class EventsController : ControllerBase
     {
         throw new NotImplementedException();
     }
-
-    /// <summary>
-    /// Добавить участника к событию
-    /// </summary>
-    /// <param name="userId">ID пользователя</param>
-    /// <param name="eventId">ID события</param>
-    /// <returns></returns>
-    [Authorize("verified_volunteer")]
-    [Route("add-user")]
-    [HttpPost]
-    public async Task<IActionResult> AddUser(Guid userId, Guid eventId)
-    {
-        UserIdentity? user = await _userManager.FindByIdAsync(userId.ToString());
-
-    Event? @event = _eventManager.Get(eventId);
-
-        bool isUserExists = _customUserManager.GetActiveUserEvents(user)
-            .Any(x => x.Id == @event.Id);
-
-        if (isUserExists)
-        {
-            return Ok(new ErrorResponse
-            {
-                Error = "user_exists",
-                Message = "Этот пользователь уже участник",
-                StatusCode = 400
-            });
-        }
-
-        _eventManager.AddUser(@event, user);
-        return Ok();
-    }
-
+    
     [Route("join/{eventId}")]
     [HttpPost]
     [Authorize("volunteer")]
@@ -192,9 +157,16 @@ public class EventsController : ControllerBase
     [Authorize("admin")]
     [Route("remove")]
     [HttpDelete]
-    public IActionResult Remove(Guid eventId)
+    public async Task<IActionResult> Remove(Guid eventId)
     {
         Event? removeEvent = _eventManager.Get(eventId);
+        UserIdentity userCreator = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+
+        if (removeEvent.Admin.Id == userCreator.Id)
+        {
+            removeEvent.IsActive = false;
+            return Ok();
+        }
 
         if (_context.Events
             .Any(x => x.Id == removeEvent.Id && x.Name == removeEvent.Name))
@@ -218,9 +190,25 @@ public class EventsController : ControllerBase
     /// <param name="eventId">ID нужного события</param>
     [Route("get")]
     [HttpGet]
-    public IActionResult Get(Guid eventId)
+    public async Task<IActionResult> Get(Guid eventId)
     {
-        return Ok(_eventManager.Get(eventId));
+        var user = await _userManager.FindByNameAsync(HttpContext.User.Identity.Name);
+        var searchEvent = _eventManager.Get(eventId);
+
+        if (await _userManager.IsInRoleAsync(user, "admin") || searchEvent.Admin.Id == user.Id)
+            return Ok(_mapper.Map<EventDto>(searchEvent, options =>
+            {
+                options.Items.Add("admin", user);
+                options.Items.Add("city", searchEvent.City);
+                options.Items.Add("eventType", searchEvent.Type);
+            }));
+
+        return Ok(new ErrorResponse
+        {
+            Error = "event_not_confirmed",
+            Message = "Такого события не существует",
+            StatusCode = 404
+        });
     }
 
     /// <summary>
@@ -239,27 +227,53 @@ public class EventsController : ControllerBase
         List<EventDto> eventDtos = new();
 
         foreach (Event eEvent in events)
-            eventDtos.Add(_mapper.Map<EventDto>(eEvent));
+            if (eEvent.IsConfirmed)
+                eventDtos.Add(_mapper.Map<EventDto>(eEvent, options =>
+                {
+                    options.Items.Add("admin", eEvent.Admin);
+                    options.Items.Add("city", eEvent.City);
+                    options.Items.Add("eventType", eEvent.Type);
+                }));
 
         return Ok(eventDtos);
     }
 
     [Route("get/list/{take}")]
     [HttpGet]
-    public IActionResult GetList(int take)
+    public async Task<IActionResult> GetList(int take)
     {
         if (take <= -1)
-        {
             return Ok(new ErrorResponse
             {
                 Error = "take_error",
                 Message = "Количество не может быть отрицательным"
             });
-        }
 
-        List<Event> events = _eventManager.GetList(take);
+        List<Event> events = new();
 
-        return Ok(events);
+        if (await _userManager.IsInRoleAsync(await _userManager.FindByNameAsync(HttpContext.User.Identity.Name),
+                "admin"))
+            events = _eventManager
+                .GetList(take)
+                .ToList();
+        else
+            events = _eventManager
+                .GetList(take)
+                .Where(x => x.IsConfirmed)
+                .ToList();
+
+
+        var eventsDto = new List<EventDto>();
+
+        foreach (Event fullEvent in events)
+            eventsDto.Add(_mapper.Map<EventDto>(fullEvent, options =>
+            {
+                options.Items.Add("city", fullEvent.City);
+                options.Items.Add("eventType", fullEvent.Type);
+                options.Items.Add("admin", fullEvent.Admin);
+            }));
+
+        return Ok(eventsDto);
     }
 
     [Route("search")]

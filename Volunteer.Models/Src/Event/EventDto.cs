@@ -1,11 +1,8 @@
-﻿using Volunteer.Models.User;
-
-namespace Volunteer.Models.Event;
+﻿namespace Volunteer.Models.Event;
 
 public class EventDto
 {
     public Guid Admin { get; set; }
-    public List<Guid> Participants { get; set; }
     public string Name { get; set; }
     public Guid City { get; set; }
     public string Venue { get; set; }

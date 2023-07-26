@@ -9,6 +9,8 @@ public class Profiler : Profile
 {
     public Profiler()
     {
+        CreateMap<UserIdentity, Guid>().ConvertUsing<AdminToGuidConverter>();
+        CreateMap<Guid, UserIdentity>().ConvertUsing<GuidToAdminConverter>();
         CreateMap<City, Guid>().ConvertUsing<CityToGuidConverter>();
         CreateMap<Guid, City>().ConvertUsing<GuidToCityConverter>();
         CreateMap<EventType, Guid>().ConvertUsing<GuidToTypeEventConverter>();
@@ -19,6 +21,9 @@ public class Profiler : Profile
         CreateMap<UserIdentity, UserRegister>().ReverseMap();
         CreateMap<UserIdentity, UserLogin>().ReverseMap();
         CreateMap<Event, EventCreate>().ReverseMap();
+
+        CreateMap<ICollection<Event>, ICollection<EventDto>>()
+            .ReverseMap();
 
         CreateMap<Event, EventDto>()
             .ReverseMap();
@@ -39,6 +44,25 @@ public class Profiler : Profile
         }
     }
 
+    class AdminToGuidConverter : ITypeConverter<UserIdentity, Guid>
+    {
+        public Guid Convert(UserIdentity source, Guid destination, ResolutionContext context)
+        {
+            return Guid.Parse(source.Id);
+        }
+    }
+
+    class GuidToAdminConverter : ITypeConverter<Guid, UserIdentity>
+    {
+        public UserIdentity Convert(Guid source, UserIdentity destination, ResolutionContext context)
+        {
+            UserIdentity admin = (UserIdentity)context.Items["admin"];
+
+            return admin;
+        }
+    }
+    
+    
     class GuidToTypeEventConverter : ITypeConverter<EventType, Guid>
     {
         public Guid Convert(EventType source, Guid destination, ResolutionContext context)
@@ -62,7 +86,7 @@ public class Profiler : Profile
     {
         public Guid Convert(City destination, Guid source, ResolutionContext context)
         {
-            return destination.Id;
+            return ((City)context.Items["city"]).Id;
         }
     }
 

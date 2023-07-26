@@ -21,8 +21,10 @@ public class DataContext : IdentityDbContext<UserIdentity>
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        // builder.Entity<Event>().Navigation(e => e.Admin).AutoInclude();
-        
+        builder.Entity<Event>().Navigation(x => x.Admin).AutoInclude();
+        builder.Entity<Event>().Navigation(x => x.City).AutoInclude();
+        builder.Entity<Event>().Navigation(x => x.Type).AutoInclude();
+
         base.OnModelCreating(builder);
     }
 }

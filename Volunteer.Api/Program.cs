@@ -83,10 +83,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-}
 
-// Конфигурационный мидлвар
-app.Use(async (context, next) =>
+    // Конфигурационный мидлвар
+    app.Use(async (context, next) => 
 {
     #region Roles
 
@@ -123,8 +122,41 @@ app.Use(async (context, next) =>
     }
 
     #endregion
+
+    #region SuperAdmin
+
+    var userManager = context.RequestServices.GetRequiredService<UserManager<UserIdentity>>();
+
+    UserIdentity? superAdmin = await userManager.FindByNameAsync("superadmin");
+
+    if (superAdmin == null)
+    {
+        List<string> superAdminString =
+            File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "TestData/superadmin.txt"))
+                .Split('\n')
+                .Select(x => x.Trim())
+                .ToList();
+
+        var result = await userManager.CreateAsync(new UserIdentity
+        {
+            Name = superAdminString[0],
+            Lastname = superAdminString[0],
+            Patronymic = superAdminString[0],
+            UserName = superAdminString[0],
+            Email = superAdminString[1]
+        }, superAdminString[2]);
+
+        if (result.Succeeded)
+            userManager.AddToRolesAsync(superAdmin,
+                new string[] { "admin", "verified_volunteer", "volunteer" });
+        else if (!result.Succeeded) throw new Exception("Не удалось создать суперадмина");
+    }
+
+    #endregion
+
     await next.Invoke();
 });
+}
 
 app.MapHub<SignalHub>("signal");
 

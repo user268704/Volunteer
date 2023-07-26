@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Volunteer.Api.Services.Events;
+using Volunteer.Infrastructure;
 using Volunteer.Models.Responses;
 using Volunteer.Models.User;
 
@@ -16,14 +17,18 @@ namespace Volunteer.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly UserManager<UserIdentity> _userManager;
+    private readonly IEventManager _eventManager;
+    private readonly DataContext _context;
 
-    public AdminController(UserManager<UserIdentity> userManager)
+    public AdminController(UserManager<UserIdentity> userManager,
+        IEventManager eventManager,
+        DataContext context)
     {
         _userManager = userManager;
+        _eventManager = eventManager;
+        _context = context;
     }
 
-
-    [AllowAnonymous]
     [Route("make-admin")]
     [HttpPost]
     public async Task<IActionResult> MakeAdmin([FromBody] Guid uid)
@@ -51,7 +56,25 @@ public class AdminController : ControllerBase
         });
     }
 
-    [Authorize("admin")]
+    [Route("verified")]
+    [HttpPost]
+    public IActionResult VerifiedEvent(Guid eventId)
+    {
+        var notVerifiedEvent = _eventManager.Get(eventId);
+        if (notVerifiedEvent == null)
+            return Ok(new ErrorResponse
+            {
+                Error = "event_not_exists",
+                Message = "Событие с таким id не существует",
+                StatusCode = 404
+            });
+
+        notVerifiedEvent.IsConfirmed = true;
+        _context.SaveChanges();
+
+        return Ok();
+    }
+    
     [Route("verified-volunteer")]
     [HttpPost]
     public async Task<IActionResult> VerifiedVolunteer([FromBody] Guid uid)

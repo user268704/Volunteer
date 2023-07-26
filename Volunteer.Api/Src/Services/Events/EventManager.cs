@@ -1,5 +1,4 @@
-﻿using FluentValidation;
-using Volunteer.Infrastructure;
+﻿using Volunteer.Infrastructure;
 using Volunteer.Models.Event;
 using Volunteer.Models.User;
 using Volunteer.Validators;
@@ -54,7 +53,9 @@ public class EventManager : IEventManager
 
     public List<Event> GetFilter(City city, EventType type)
     {
-        var events = _context.Events.Where(x => x.City.Id == city.Id && x.Type.Id == type.Id).ToList();
+        var events = _context.Events
+            .Where(x => x.City.Id == city.Id && x.Type.Id == type.Id)
+            .ToList();
 
         return events;
     }

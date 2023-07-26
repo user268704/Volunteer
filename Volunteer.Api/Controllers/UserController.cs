@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Volunteer.Api.Jwt;
 using Volunteer.Api.Services.Users;
+using Volunteer.Models.Event;
 using Volunteer.Models.Responses;
 using Volunteer.Models.User;
 
@@ -150,12 +151,27 @@ public class UserController : ControllerBase
             return Ok(new ErrorResponse
             {
                 Error = "user_not_found",
-                Message = "Такого пользователя не существует",
+                Message = "Вы не авторизованы",
                 StatusCode = 404
             });
         }
 
-        return Ok(_customUserManager.GetActiveUserEvents(user));
+        var activeEvents = _customUserManager.GetActiveUserEvents(user);
+
+        List<EventDto> eventDtos = new();
+
+        foreach (Event activeEvent in activeEvents)
+            eventDtos.Add(_mapper.Map<EventDto>(activeEvent, options =>
+            {
+                options.Items.Add("city", activeEvent.City);
+                options.Items.Add("admin", activeEvent.Admin);
+                options.Items.Add("eventType", activeEvent.Type);
+            }));
+
+        // var activeEventsDto = _mapper.Map<IEnumerable<EventDto>>(activeEvents);
+
+
+        return Ok(eventDtos);
     }
 
     /// <summary>

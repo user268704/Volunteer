@@ -6,6 +6,7 @@ public class Event
 {
     public Guid Id { get; set; }
     public bool IsConfirmed { get; set; }
+    public bool IsActive { get; set; }
     public UserIdentity Admin { get; set; }
     public string Name { get; set; }
     public City City { get; set; }
